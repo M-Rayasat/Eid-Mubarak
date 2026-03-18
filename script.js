@@ -185,24 +185,112 @@ submitButton.addEventListener('click', () => {
     triggerConfetti();
 });
 
-// Save user data to localStorage
-function saveUserData(data) {
+// GitHub Gist Configuration
+const GITHUB_TOKEN = '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';
+const GIST_ID = localStorage.getItem('eidGistId') || null;
+
+// Save user data to GitHub Gist
+async function saveUserData(data) {
     const timestamp = new Date().toISOString();
     const userEntry = {
         timestamp: timestamp,
         answers: data
     };
 
-    // Get existing responses
-    let allResponses = JSON.parse(localStorage.getItem('eidResponses') || '[]');
+    try {
+        // Get existing responses from gist or localStorage
+        let allResponses = await fetchResponsesFromGist();
 
-    // Add new response
-    allResponses.push(userEntry);
+        // Add new response
+        allResponses.push(userEntry);
 
-    // Save back to localStorage
-    localStorage.setItem('eidResponses', JSON.stringify(allResponses));
+        // Save to GitHub Gist
+        await saveToGist(allResponses);
 
-    console.log('Data saved successfully to localStorage');
+        console.log('Data saved successfully to GitHub Gist');
+    } catch (error) {
+        console.error('Error saving to Gist, falling back to localStorage:', error);
+
+        // Fallback to localStorage
+        let allResponses = JSON.parse(localStorage.getItem('eidResponses') || '[]');
+        allResponses.push(userEntry);
+        localStorage.setItem('eidResponses', JSON.stringify(allResponses));
+    }
+}
+
+// Fetch responses from GitHub Gist
+async function fetchResponsesFromGist() {
+    if (!GIST_ID) {
+        return [];
+    }
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        if (response.ok) {
+            const gist = await response.json();
+            const content = gist.files['eid-responses.json'].content;
+            return JSON.parse(content);
+        }
+    } catch (error) {
+        console.error('Error fetching from Gist:', error);
+    }
+
+    return [];
+}
+
+// Save responses to GitHub Gist
+async function saveToGist(responses) {
+    const gistData = {
+        description: 'Eid Mubarak User Responses',
+        public: false,
+        files: {
+            'eid-responses.json': {
+                content: JSON.stringify(responses, null, 2)
+            }
+        }
+    };
+
+    if (GIST_ID) {
+        // Update existing gist
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update gist');
+        }
+    } else {
+        // Create new gist
+        const response = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+
+        if (response.ok) {
+            const gist = await response.json();
+            localStorage.setItem('eidGistId', gist.id);
+            console.log('New Gist created:', gist.id);
+        } else {
+            throw new Error('Failed to create gist');
+        }
+    }
 }
 
 function showResults() {
