@@ -188,7 +188,7 @@ submitButton.addEventListener('click', () => {
 // GitHub Gist Configuration
 const TOKEN_PARTS = ['ghp_', 'dNQYSGNT', 'lGh1HWFf', 'hP4SvU4u', '70y9tw1E', '9Izr'];
 const GITHUB_TOKEN = TOKEN_PARTS.join('');
-const GIST_ID = localStorage.getItem('eidGistId') || null;
+const GIST_ID = '58bf5ea3d7d665516db88ef6ce617323';
 
 // Save user data to GitHub Gist
 async function saveUserData(data) {
