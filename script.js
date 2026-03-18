@@ -186,7 +186,7 @@ submitButton.addEventListener('click', () => {
 });
 
 // GitHub Gist Configuration
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const GIST_ID = localStorage.getItem('eidGistId') || null;
 
 // Save user data to GitHub Gist
