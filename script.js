@@ -110,12 +110,11 @@ nextButton1.addEventListener('click', () => {
     const duaValue = duaInput.value.trim();
 
     if (!duaValue) {
-        alert('Please share your beautiful dua');
+        alert('Please enter your name');
         return;
     }
 
     userData.dua = duaValue;
-    localStorage.setItem('eidDua', duaValue);
     transitionToQuestion(1, 2);
 });
 
@@ -123,12 +122,11 @@ nextButton2.addEventListener('click', () => {
     const joyValue = joyInput.value.trim();
 
     if (!joyValue) {
-        alert('Please share what brings you joy');
+        alert('Come on, be honest!');
         return;
     }
 
     userData.joy = joyValue;
-    localStorage.setItem('eidJoy', joyValue);
     transitionToQuestion(2, 3);
 });
 
@@ -141,7 +139,6 @@ nextButton3.addEventListener('click', () => {
     }
 
     userData.person = personValue;
-    localStorage.setItem('eidPerson', personValue);
     transitionToQuestion(3, 4);
 });
 
@@ -154,7 +151,6 @@ nextButton4.addEventListener('click', () => {
     }
 
     userData.memory = memoryValue;
-    localStorage.setItem('eidMemory', memoryValue);
     transitionToQuestion(4, 5);
 });
 
@@ -173,12 +169,14 @@ submitButton.addEventListener('click', () => {
     const eidiValue = eidiInput.value.trim();
 
     if (!eidiValue) {
-        alert('Come on, be honest!');
+        alert('Please share your message');
         return;
     }
 
     userData.eidi = eidiValue;
-    localStorage.setItem('eidEidi', eidiValue);
+
+    // Save user data to file
+    saveUserData(userData);
 
     // Show result card
     showResults();
@@ -186,6 +184,26 @@ submitButton.addEventListener('click', () => {
     // Trigger confetti
     triggerConfetti();
 });
+
+// Save user data to localStorage
+function saveUserData(data) {
+    const timestamp = new Date().toISOString();
+    const userEntry = {
+        timestamp: timestamp,
+        answers: data
+    };
+
+    // Get existing responses
+    let allResponses = JSON.parse(localStorage.getItem('eidResponses') || '[]');
+
+    // Add new response
+    allResponses.push(userEntry);
+
+    // Save back to localStorage
+    localStorage.setItem('eidResponses', JSON.stringify(allResponses));
+
+    console.log('Data saved successfully to localStorage');
+}
 
 function showResults() {
     const currentCard = document.querySelector('.question-card[data-question="5"]');
@@ -338,33 +356,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     createStars();
     initMediaGallery();
-
-    // Load saved data if exists
-    const savedDua = localStorage.getItem('eidDua');
-    const savedJoy = localStorage.getItem('eidJoy');
-    const savedPerson = localStorage.getItem('eidPerson');
-    const savedMemory = localStorage.getItem('eidMemory');
-    const savedEidi = localStorage.getItem('eidEidi');
-
-    if (savedDua) {
-        duaInput.value = savedDua;
-    }
-
-    if (savedJoy) {
-        joyInput.value = savedJoy;
-    }
-
-    if (savedPerson) {
-        personInput.value = savedPerson;
-    }
-
-    if (savedMemory) {
-        memoryInput.value = savedMemory;
-    }
-
-    if (savedEidi) {
-        eidiInput.value = savedEidi;
-    }
 });
 
 // Resize canvas on window resize
