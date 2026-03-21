@@ -25,6 +25,8 @@ function initLetterAnimation() {
         setTimeout(() => {
             envelopeContainer.style.opacity = '0';
             letterContent.classList.add('show');
+            // Trigger confetti when letter appears
+            triggerConfetti();
         }, 1000);
 
         // Hide overlay and show main website
@@ -328,6 +330,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
     createStars();
     initMediaGallery();
+
+    // Auto-play video with sound on user interaction
+    const eidVideo = document.getElementById('eidVideo');
+    if (eidVideo) {
+        // Try to play immediately
+        const playPromise = eidVideo.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(() => {
+                // If autoplay fails, play on first user interaction
+                document.body.addEventListener('click', () => {
+                    eidVideo.play();
+                }, { once: true });
+            });
+        }
+    }
 
     // Load saved data if exists
     const savedDua = localStorage.getItem('eidDua');
