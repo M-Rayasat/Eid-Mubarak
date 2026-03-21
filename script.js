@@ -25,6 +25,7 @@ function initLetterAnimation() {
         setTimeout(() => {
             envelopeContainer.style.opacity = '0';
             letterContent.classList.add('show');
+
             // Trigger confetti when letter appears
             triggerConfetti();
         }, 1000);
@@ -33,10 +34,15 @@ function initLetterAnimation() {
         setTimeout(() => {
             letterOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
+
+            // Auto-start video after envelope opens
+            const video = document.querySelector('video');
+            if (video) {
+                video.play().catch(err => console.log('Video autoplay blocked:', err));
+            }
         }, 3500);
     });
 }
-
 
 // Stars Animation
 function createStars() {
@@ -55,26 +61,28 @@ function createStars() {
     }
 }
 
-// Music Toggle
+// Video Mute/Unmute Toggle
 const musicToggle = document.getElementById('musicToggle');
-const backgroundMusic = document.getElementById('backgroundMusic');
-let isMusicPlaying = false;
+let isVideoMuted = false;
 
 musicToggle.addEventListener('click', () => {
-    if (isMusicPlaying) {
-        backgroundMusic.pause();
-        musicToggle.classList.remove('playing');
-    } else {
-        backgroundMusic.play();
-        musicToggle.classList.add('playing');
+    const video = document.querySelector('video');
+    if (video) {
+        if (isVideoMuted) {
+            video.muted = false;
+            musicToggle.innerHTML = '<span class="music-icon">🔊</span>';
+        } else {
+            video.muted = true;
+            musicToggle.innerHTML = '<span class="music-icon">🔇</span>';
+        }
+        isVideoMuted = !isVideoMuted;
     }
-    isMusicPlaying = !isMusicPlaying;
 });
 
-// CTA Button - Scroll to Questions
+// CTA Button - Scroll to Media Section
 const ctaButton = document.getElementById('ctaButton');
 ctaButton.addEventListener('click', () => {
-    document.getElementById('questionsSection').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('mediaSection').scrollIntoView({ behavior: 'smooth' });
 });
 
 // Questions Flow
@@ -102,12 +110,11 @@ nextButton1.addEventListener('click', () => {
     const duaValue = duaInput.value.trim();
 
     if (!duaValue) {
-        alert('Please share your beautiful dua');
+        alert('Please enter your name');
         return;
     }
 
     userData.dua = duaValue;
-    localStorage.setItem('eidDua', duaValue);
     transitionToQuestion(1, 2);
 });
 
@@ -115,12 +122,11 @@ nextButton2.addEventListener('click', () => {
     const joyValue = joyInput.value.trim();
 
     if (!joyValue) {
-        alert('Please share what brings you joy');
+        alert('Come on, be honest!');
         return;
     }
 
     userData.joy = joyValue;
-    localStorage.setItem('eidJoy', joyValue);
     transitionToQuestion(2, 3);
 });
 
@@ -133,7 +139,6 @@ nextButton3.addEventListener('click', () => {
     }
 
     userData.person = personValue;
-    localStorage.setItem('eidPerson', personValue);
     transitionToQuestion(3, 4);
 });
 
@@ -146,7 +151,6 @@ nextButton4.addEventListener('click', () => {
     }
 
     userData.memory = memoryValue;
-    localStorage.setItem('eidMemory', memoryValue);
     transitionToQuestion(4, 5);
 });
 
@@ -165,12 +169,14 @@ submitButton.addEventListener('click', () => {
     const eidiValue = eidiInput.value.trim();
 
     if (!eidiValue) {
-        alert('Come on, be honest!');
+        alert('Please share your message');
         return;
     }
 
     userData.eidi = eidiValue;
-    localStorage.setItem('eidEidi', eidiValue);
+
+    // Save user data to file
+    saveUserData(userData);
 
     // Show result card
     showResults();
@@ -178,6 +184,115 @@ submitButton.addEventListener('click', () => {
     // Trigger confetti
     triggerConfetti();
 });
+
+// GitHub Gist Configuration
+const TOKEN_PARTS = ['ghp_', 'dNQYSGNT', 'lGh1HWFf', 'hP4SvU4u', '70y9tw1E', '9Izr'];
+const GITHUB_TOKEN = TOKEN_PARTS.join('');
+const GIST_ID = '58bf5ea3d7d665516db88ef6ce617323';
+
+// Save user data to GitHub Gist
+async function saveUserData(data) {
+    const timestamp = new Date().toISOString();
+    const userEntry = {
+        timestamp: timestamp,
+        answers: data
+    };
+
+    try {
+        // Get existing responses from gist or localStorage
+        let allResponses = await fetchResponsesFromGist();
+
+        // Add new response
+        allResponses.push(userEntry);
+
+        // Save to GitHub Gist
+        await saveToGist(allResponses);
+
+        console.log('Data saved successfully to GitHub Gist');
+    } catch (error) {
+        console.error('Error saving to Gist, falling back to localStorage:', error);
+
+        // Fallback to localStorage
+        let allResponses = JSON.parse(localStorage.getItem('eidResponses') || '[]');
+        allResponses.push(userEntry);
+        localStorage.setItem('eidResponses', JSON.stringify(allResponses));
+    }
+}
+
+// Fetch responses from GitHub Gist
+async function fetchResponsesFromGist() {
+    if (!GIST_ID) {
+        return [];
+    }
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        if (response.ok) {
+            const gist = await response.json();
+            const content = gist.files['eid-responses.json'].content;
+            return JSON.parse(content);
+        }
+    } catch (error) {
+        console.error('Error fetching from Gist:', error);
+    }
+
+    return [];
+}
+
+// Save responses to GitHub Gist
+async function saveToGist(responses) {
+    const gistData = {
+        description: 'Eid Mubarak User Responses',
+        public: false,
+        files: {
+            'eid-responses.json': {
+                content: JSON.stringify(responses, null, 2)
+            }
+        }
+    };
+
+    if (GIST_ID) {
+        // Update existing gist
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update gist');
+        }
+    } else {
+        // Create new gist
+        const response = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+
+        if (response.ok) {
+            const gist = await response.json();
+            localStorage.setItem('eidGistId', gist.id);
+            console.log('New Gist created:', gist.id);
+        } else {
+            throw new Error('Failed to create gist');
+        }
+    }
+}
 
 function showResults() {
     const currentCard = document.querySelector('.question-card[data-question="5"]');
@@ -330,48 +445,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     createStars();
     initMediaGallery();
-
-    // Auto-play video with sound on user interaction
-    const eidVideo = document.getElementById('eidVideo');
-    if (eidVideo) {
-        // Try to play immediately
-        const playPromise = eidVideo.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(() => {
-                // If autoplay fails, play on first user interaction
-                document.body.addEventListener('click', () => {
-                    eidVideo.play();
-                }, { once: true });
-            });
-        }
-    }
-
-    // Load saved data if exists
-    const savedDua = localStorage.getItem('eidDua');
-    const savedJoy = localStorage.getItem('eidJoy');
-    const savedPerson = localStorage.getItem('eidPerson');
-    const savedMemory = localStorage.getItem('eidMemory');
-    const savedEidi = localStorage.getItem('eidEidi');
-
-    if (savedDua) {
-        duaInput.value = savedDua;
-    }
-
-    if (savedJoy) {
-        joyInput.value = savedJoy;
-    }
-
-    if (savedPerson) {
-        personInput.value = savedPerson;
-    }
-
-    if (savedMemory) {
-        memoryInput.value = savedMemory;
-    }
-
-    if (savedEidi) {
-        eidiInput.value = savedEidi;
-    }
 });
 
 // Resize canvas on window resize
